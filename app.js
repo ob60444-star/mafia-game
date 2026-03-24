@@ -1,3 +1,8 @@
+window.onload = () => {
+    setTimeout(() => {
+        document.getElementById('splash-screen').classList.add('fade-out');
+    }, 2000); // بتختفي بعد ثانيتين
+};
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -101,10 +106,21 @@ startGameBtn.addEventListener('click', async () => {
     const shuffled = [...players].sort(() => 0.5 - Math.random());
     const roles = {};
     
-    // توزيع بسيط: أول واحد مافيا، الباقي مواطنين (فيك تزيد أدوار بعدين)
-    roles[shuffled[0]] = "🕵️‍♂️ مافيا";
-    roles[shuffled[1]] = "🩺 طبيب";
-    for(let i=2; i<shuffled.length; i++) roles[shuffled[i]] = "👷 مواطن";
+    // منطق توزيع الأدوار الذكي:
+    // لكل 4 لاعبين رح نحط 1 مافيا، و 1 طبيب، والباقي مواطنين
+    const mafiaCount = Math.max(1, Math.floor(players.length / 4));
+    
+    shuffled.forEach((player, index) => {
+        if (index < mafiaCount) {
+            roles[player] = "🕵️‍♂️ مافيا";
+        } else if (index === mafiaCount) {
+            roles[player] = "🩺 طبيب";
+        } else if (index === mafiaCount + 1 && players.length > 5) {
+            roles[player] = "🔍 محقق"; // دور إضافي للأعداد الكبيرة
+        } else {
+            roles[player] = "👷 مواطن";
+        }
+    });
 
     await updateDoc(roomRef, {
         status: "started",
