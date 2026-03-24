@@ -19,17 +19,34 @@ body {
 }
 .main-card {
     background: var(--card-bg);
-    padding: 25px; /* تقليل الحواف شوي للموبايل */
-    border-radius: 25px;
+    padding: 30px 20px;
+    border-radius: 0; /* حواف حادة أو خفيفة للموبايل ليأخذ مساحة أكبر */
     text-align: center;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.7);
-    width: 95%; /* ياخد عرض الشاشة */
-    max-width: 400px; /* ما يكبر كتير على اللابتوب */
-    margin: 10px;
-    box-sizing: border-box; /* مشان الحواف ما تطلع لبرة */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 100%; /* عرض كامل الشاشة */
+    min-height: 100vh; /* طول كامل الشاشة */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
+/* إذا كان الجهاز لابتوب أو شاشة كبيرة، نرجعه لمربع متوسط */
+@media (min-width: 600px) {
+    .main-card {
+        width: 400px;
+        min-height: auto;
+        border-radius: 30px;
+        margin: 20px;
+    }
+}
 
+.voting-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    width: 100%;
+}
 /* حركة دخول الكرت الرئيسي */
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(50px); }
