@@ -208,6 +208,14 @@ function showFinalResult(data) {
         </div>
     `;
 }
+self.addEventListener('install', (e) => {
+    console.log('[Service Worker] تم التثبيت بنجاح');
+});
+
+self.addEventListener('fetch', (e) => {
+    // هاد الحدث ضروري جداً ليظهر زر التثبيت (Add to Home Screen)
+    // حالياً ما بيعمل شي غير إنه بيسمح بمرور البيانات
+});
 
 function showLobby(code) {
     setupSection.style.display = "none";
