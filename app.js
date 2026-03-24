@@ -7,131 +7,111 @@ const firebaseConfig = {
   projectId: "mafia-game-3c358",
   storageBucket: "mafia-game-3c358.firebasestorage.app",
   messagingSenderId: "468841815233",
-  appId: "1:468841815233:web:e31d6cde7034cdd98d0840",
-  measurementId: "G-QX2BDDS780"
+  appId: "1:468841815233:web:e31d6cde7034cdd98d0840"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- تعريف العناصر من HTML ---
+// عناصر الواجهة
 const setupSection = document.getElementById('setup-section');
 const lobbySection = document.getElementById('lobby-section');
 const playersListUI = document.getElementById('playersList');
 const displayRoomCode = document.getElementById('displayRoomCode');
+const startGameBtn = document.getElementById('startGameBtn');
 
 const btnCreate = document.getElementById('createRoomBtn');
 const btnJoin = document.getElementById('joinRoomBtn');
 const inputName = document.getElementById('playerName');
 const inputRoomCode = document.getElementById('roomCodeInput');
 
-// --- وظيفة إنشاء غرفة جديدة ---
+// إنشاء غرفة
 btnCreate.addEventListener('click', async () => {
     const name = inputName.value.trim();
-    if (name === "") { alert("اكتب اسمك أولاً!"); return; }
+    if (!name) return alert("اكتب اسمك!");
 
     const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+    await setDoc(doc(db, "rooms", roomCode), {
+        admin: name,
+        players: [name],
+        status: "waiting",
+        roles: {}
+    });
 
-    try {
-        await setDoc(doc(db, "rooms", roomCode), {
-            admin: name,
-            status: "waiting",
-            players: [name],
-            createdAt: new Date()
-        });
-
-        startListening(roomCode); // ابدأ بمراقبة الغرفة
-        showLobby(roomCode);
-    } catch (e) { console.error("خطأ بالإنشاء: ", e); }
+    startListening(roomCode);
+    showLobby(roomCode);
 });
 
-// --- وظيفة الانضمام لغرفة موجودة ---
+// انضمام لغرفة
 btnJoin.addEventListener('click', async () => {
     const name = inputName.value.trim();
     const code = inputRoomCode.value.trim();
-
-    if (name === "" || code === "") { alert("دخل اسمك ورمز الغرفة!"); return; }
+    if (!name || !code) return alert("عبّي البيانات!");
 
     const roomRef = doc(db, "rooms", code);
     const roomSnap = await getDoc(roomRef);
 
     if (roomSnap.exists()) {
-        // إضافة اللاعب الجديد لمصفوفة اللاعبين في فايربيس
-        await updateDoc(roomRef, {
-            players: arrayUnion(name)
-        });
-        
-        startListening(code); // ابدأ بمراقبة الغرفة
+        await updateDoc(roomRef, { players: arrayUnion(name) });
+        startListening(code);
         showLobby(code);
     } else {
-        alert("رمز الغرفة غلط أو مو موجودة!");
+        alert("الغرفة مو موجودة!");
     }
 });
 
-// --- وظيفة مراقبة الغرفة (لحظياً) ---
-// هي الوظيفة بتخلي الأسماء تظهر فوراً عند الكل بس ينضم حدا جديد
+// مراقبة الغرفة لحظياً
 function startListening(code) {
-    onSnapshot(doc(db, "rooms", code), (doc) => {
-        const data = doc.data();
+    onSnapshot(doc(db, "rooms", code), (snapshot) => {
+        const data = snapshot.data();
         if (!data) return;
 
-        // تحديث قائمة اللاعبين
-        playersListUI.innerHTML = "";
-        data.players.forEach(p => {
-            const li = document.createElement('li');
-            li.textContent = `👤 ${p}`;
-            playersListUI.appendChild(li);
-        });
+        // تحديث القائمة
+        playersListUI.innerHTML = data.players.map(p => `<li>👤 ${p}</li>`).join('');
 
-        // فحص إذا اللعبة بدأت
+        // إظهار زر البدء للآدمن فقط (إذا صاروا 3 أو أكثر)
+        if (data.admin === inputName.value.trim() && data.players.length >= 3 && data.status === "waiting") {
+            startGameBtn.style.display = "block";
+        }
+
+        // إذا بدأت اللعبة، أظهر الدور لكل لاعب
         if (data.status === "started") {
-            const myName = inputName.value.trim();
-            const myRole = data.roles[myName];
-            
-            // إظهار الدور بجمالية
+            const myRole = data.roles[inputName.value.trim()];
             lobbySection.innerHTML = `
-                <h2 style="color: #ff3366;">بدأت اللعبة!</h2>
-                <div style="padding: 20px; background: #333; border-radius: 15px; margin-top: 20px;">
-                    <p>أنت الآن بدور:</p>
-                    <h1 style="font-size: 3rem;">${myRole}</h1>
+                <div style="text-align:center; animation: fadeIn 1s;">
+                    <h2 style="color: #ff3366;">بدأت اللعبة!</h2>
+                    <p>دورك السري هو:</p>
+                    <h1 style="font-size: 3.5rem; margin: 20px 0;">${myRole}</h1>
+                    <p style="color: #888;">لا تخلي حدا يشوف شاشتك! 😉</p>
                 </div>
             `;
         }
     });
 }
 
-function showLobby(code) {
-    setupSection.style.display = "none";
-    lobbySection.style.display = "block";
-    displayRoomCode.innerText = code;
-}
-const btnStart = document.getElementById('startGameBtn');
-
-btnStart.addEventListener('click', async () => {
+// توزيع الأدوار وبدء اللعبة
+startGameBtn.addEventListener('click', async () => {
     const code = displayRoomCode.innerText;
     const roomRef = doc(db, "rooms", code);
     const roomSnap = await getDoc(roomRef);
     const players = roomSnap.data().players;
 
-    if (players.length < 3) {
-        alert("لازم يكون في 3 لاعبين على الأقل لنبدأ!");
-        return;
-    }
-
-    // خلط اللاعبين عشوائياً
-    const shuffled = players.sort(() => 0.5 - Math.random());
-    
-    // توزيع الأدوار (مثال بسيط: أول واحد مافيا، تاني واحد طبيب، الباقي مواطنين)
+    const shuffled = [...players].sort(() => 0.5 - Math.random());
     const roles = {};
-    roles[shuffled[0]] = "مافيا 🕵️‍♂️";
-    roles[shuffled[1]] = "طبيب 🩺";
-    for (let i = 2; i < shuffled.length; i++) {
-        roles[shuffled[i]] = "مواطن 👷";
-    }
+    
+    // توزيع بسيط: أول واحد مافيا، الباقي مواطنين (فيك تزيد أدوار بعدين)
+    roles[shuffled[0]] = "🕵️‍♂️ مافيا";
+    roles[shuffled[1]] = "🩺 طبيب";
+    for(let i=2; i<shuffled.length; i++) roles[shuffled[i]] = "👷 مواطن";
 
-    // تحديث الغرفة في فايربيس بالأدوار وتغيير الحالة لـ "started"
     await updateDoc(roomRef, {
         status: "started",
         roles: roles
     });
 });
+
+function showLobby(code) {
+    setupSection.style.display = "none";
+    lobbySection.style.display = "block";
+    displayRoomCode.innerText = code;
+}
