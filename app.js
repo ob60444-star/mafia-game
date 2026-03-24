@@ -73,18 +73,29 @@ btnJoin.addEventListener('click', async () => {
 function startListening(code) {
     onSnapshot(doc(db, "rooms", code), (doc) => {
         const data = doc.data();
-        if (data) {
-            playersListUI.innerHTML = ""; // تنظيف القائمة
-            data.players.forEach(player => {
-                const li = document.createElement('li');
-                li.textContent = `👤 ${player}`;
-                playersListUI.appendChild(li);
-            });
+        if (!data) return;
 
-            // إذا دخل 4 لاعبين أو أكتر، فينا نظهر زر البدء للآدمين بس
-            if (data.players.length >= 4 && data.admin === inputName.value.trim()) {
-                document.getElementById('startGameBtn').style.display = "block";
-            }
+        // تحديث قائمة اللاعبين
+        playersListUI.innerHTML = "";
+        data.players.forEach(p => {
+            const li = document.createElement('li');
+            li.textContent = `👤 ${p}`;
+            playersListUI.appendChild(li);
+        });
+
+        // فحص إذا اللعبة بدأت
+        if (data.status === "started") {
+            const myName = inputName.value.trim();
+            const myRole = data.roles[myName];
+            
+            // إظهار الدور بجمالية
+            lobbySection.innerHTML = `
+                <h2 style="color: #ff3366;">بدأت اللعبة!</h2>
+                <div style="padding: 20px; background: #333; border-radius: 15px; margin-top: 20px;">
+                    <p>أنت الآن بدور:</p>
+                    <h1 style="font-size: 3rem;">${myRole}</h1>
+                </div>
+            `;
         }
     });
 }
@@ -94,3 +105,33 @@ function showLobby(code) {
     lobbySection.style.display = "block";
     displayRoomCode.innerText = code;
 }
+const btnStart = document.getElementById('startGameBtn');
+
+btnStart.addEventListener('click', async () => {
+    const code = displayRoomCode.innerText;
+    const roomRef = doc(db, "rooms", code);
+    const roomSnap = await getDoc(roomRef);
+    const players = roomSnap.data().players;
+
+    if (players.length < 3) {
+        alert("لازم يكون في 3 لاعبين على الأقل لنبدأ!");
+        return;
+    }
+
+    // خلط اللاعبين عشوائياً
+    const shuffled = players.sort(() => 0.5 - Math.random());
+    
+    // توزيع الأدوار (مثال بسيط: أول واحد مافيا، تاني واحد طبيب، الباقي مواطنين)
+    const roles = {};
+    roles[shuffled[0]] = "مافيا 🕵️‍♂️";
+    roles[shuffled[1]] = "طبيب 🩺";
+    for (let i = 2; i < shuffled.length; i++) {
+        roles[shuffled[i]] = "مواطن 👷";
+    }
+
+    // تحديث الغرفة في فايربيس بالأدوار وتغيير الحالة لـ "started"
+    await updateDoc(roomRef, {
+        status: "started",
+        roles: roles
+    });
+});
