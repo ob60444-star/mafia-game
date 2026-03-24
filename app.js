@@ -80,22 +80,21 @@ function startListening(code) {
         const myName = inputName.value.trim();
         const isAdmin = data.admin === myName;
 
-        // تحديث قائمة اللاعبين في اللوبي
         if (playersListUI) {
             playersListUI.innerHTML = data.players.map(p => `<li>👤 ${p}</li>`).join('');
         }
 
-        // إظهار زر البدء للآدمن
         if (isAdmin && data.players.length >= 3 && data.status === "waiting") {
             startGameBtn.style.display = "block";
         }
 
-        // الحالات المختلفة للعبة
+        // الحالات - ركز هون على ترتيب الإخفاء والإظهار
         if (data.status === "started") {
             showRoleCard(data, isAdmin, code);
         } else if (data.status === "voting") {
             showVotingUI(code, data, isAdmin);
         } else if (data.status === "result") {
+            // هي اللي كانت ناقصة: إخفاء قسم التصويت عند الكل وإظهار النتيجة
             showFinalResult(data);
         }
     });
@@ -190,18 +189,22 @@ function showVotingUI(code, data, isAdmin) {
         };
     }
 }
-
 function showFinalResult(data) {
-    votingSection.style.display = "none";
-    const lobby = document.getElementById('lobby-section');
-    lobby.style.display = "block";
-    
-    lobby.innerHTML = `
-        <div class="role-card" style="border-color:#ff3366;">
-            <h2>النتيجة النهائية ⚖️</h2>
-            <p>تم طرد:</p>
-            <h1 style="font-size: 3rem; color: #fff;">💀 ${data.eliminated} 💀</h1>
-            <button onclick="location.reload()" class="btn-secondary">لعبة جديدة 🔄</button>
+    // 1. إخفاء كل الأقسام القديمة فوراً عند الجميع
+    setupSection.style.display = "none";
+    votingSection.style.display = "none"; 
+    lobbySection.style.display = "block"; // سنعرض النتيجة داخل اللوبي
+
+    // 2. عرض كرت النتيجة
+    lobbySection.innerHTML = `
+        <div class="role-card" style="border-color:#ff3366; animation: flipIn 1s;">
+            <h2 style="color: #ff3366; margin-bottom:10px;">انتهى التصويت! ⚖️</h2>
+            <p style="color:#888;">القرية قررت التخلص من:</p>
+            <h1 style="font-size: 3rem; color: #fff; margin: 20px 0;">💀 ${data.eliminated} 💀</h1>
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-bottom:20px;">
+                تأكدوا الآن.. هل كان هو المافيا؟ 🕵️‍♂️
+            </div>
+            <button onclick="location.reload()" class="btn-primary">لعبة جديدة 🔄</button>
         </div>
     `;
 }
