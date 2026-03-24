@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لعبة المافيا</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-card">
+        <h1>🕵️‍♂️ لعبة المافيا</h1>
+
+        <div id="setup-section">
+            <input type="text" id="playerName" placeholder="اكتب اسمك هون...">
+            <button id="createRoomBtn" class="btn-primary">أنشئ غرفة جديدة</button>
+            <p>أو</p>
+            <input type="text" id="roomCodeInput" placeholder="دخل رمز الغرفة...">
+            <button id="joinRoomBtn" class="btn-secondary">انضم للغرفة</button>
+        </div>
+
+        <div id="lobby-section" style="display: none;">
+            <h3>رمز الغرفة: <span id="displayRoomCode" style="color: #ff3366;">----</span></h3>
+            <hr style="margin: 15px 0; border: 0.5px solid #444;">
+            <h4>اللاعبون المتصلون:</h4>
+            <ul id="playersList" style="list-style: none; padding: 0; margin: 15px 0; text-align: right;">
+                </ul>
+            <button id="startGameBtn" class="btn-primary" style="background: #28a745; display: none;">بدء اللعبة! 🚀</button>
+            <p style="font-size: 0.8rem; color: #888;">بانتظار دخول باقي اللاعبين...</p>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
