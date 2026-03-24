@@ -75,14 +75,16 @@ function startListening(code) {
         }
 
         // إذا بدأت اللعبة، أظهر الدور لكل لاعب
-        if (data.status === "started") {
+      if (data.status === "started") {
             const myRole = data.roles[inputName.value.trim()];
             lobbySection.innerHTML = `
-                <div style="text-align:center; animation: fadeIn 1s;">
-                    <h2 style="color: #ff3366;">بدأت اللعبة!</h2>
-                    <p>دورك السري هو:</p>
-                    <h1 style="font-size: 3.5rem; margin: 20px 0;">${myRole}</h1>
-                    <p style="color: #888;">لا تخلي حدا يشوف شاشتك! 😉</p>
+                <div class="role-card">
+                    <h2 style="color: #ff3366; margin-bottom: 10px;">بدأت اللعبة!</h2>
+                    <p style="color: #888;">دورك السري هو:</p>
+                    <h1 style="font-size: 3.5rem; margin: 20px 0; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${myRole}</h1>
+                    <div style="background: rgba(255,51,102,0.1); padding: 10px; border-radius: 10px; font-size: 0.9rem;">
+                        🤫 لا تخلي حدا يشوف موبايلك!
+                    </div>
                 </div>
             `;
         }
