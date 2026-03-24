@@ -1,6 +1,7 @@
 window.onload = () => {
     setTimeout(() => {
-        document.getElementById('splash-screen').classList.add('fade-out');
+        const splash = document.getElementById('splash-screen');
+        if(splash) splash.classList.add('fade-out');
     }, 2000);
 };
 
@@ -26,6 +27,7 @@ const votingSection = document.getElementById('voting-section');
 const playersListUI = document.getElementById('playersList');
 const displayRoomCode = document.getElementById('displayRoomCode');
 const startGameBtn = document.getElementById('startGameBtn');
+const endVotingBtn = document.getElementById('endVotingBtn');
 
 const btnCreate = document.getElementById('createRoomBtn');
 const btnJoin = document.getElementById('joinRoomBtn');
@@ -35,7 +37,7 @@ const inputRoomCode = document.getElementById('roomCodeInput');
 // إنشاء غرفة
 btnCreate.addEventListener('click', async () => {
     const name = inputName.value.trim();
-    if (!name) return alert("اكتب اسمك!");
+    if (!name) return alert("اكتب اسمك أولاً!");
 
     const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
     await setDoc(doc(db, "rooms", roomCode), {
@@ -55,7 +57,7 @@ btnCreate.addEventListener('click', async () => {
 btnJoin.addEventListener('click', async () => {
     const name = inputName.value.trim();
     const code = inputRoomCode.value.trim();
-    if (!name || !code) return alert("عبّي البيانات!");
+    if (!name || !code) return alert("دخل بياناتك!");
 
     const roomRef = doc(db, "rooms", code);
     const roomSnap = await getDoc(roomRef);
@@ -65,70 +67,64 @@ btnJoin.addEventListener('click', async () => {
         startListening(code);
         showLobby(code);
     } else {
-        alert("الغرفة مو موجودة!");
+        alert("الغرفة غير موجودة!");
     }
 });
 
-// مراقبة الغرفة لحظياً
+// مراقبة الغرفة
 function startListening(code) {
     onSnapshot(doc(db, "rooms", code), (snapshot) => {
         const data = snapshot.data();
         if (!data) return;
+
+        const myName = inputName.value.trim();
+        const isAdmin = data.admin === myName;
 
         // تحديث قائمة اللاعبين في اللوبي
         if (playersListUI) {
             playersListUI.innerHTML = data.players.map(p => `<li>👤 ${p}</li>`).join('');
         }
 
-        // إظهار زر البدء للآدمن فقط
-        if (data.admin === inputName.value.trim() && data.players.length >= 3 && data.status === "waiting") {
+        // إظهار زر البدء للآدمن
+        if (isAdmin && data.players.length >= 3 && data.status === "waiting") {
             startGameBtn.style.display = "block";
         }
 
-        // حالة بدء اللعبة (عرض الأدوار)
+        // الحالات المختلفة للعبة
         if (data.status === "started") {
-            showRoleCard(data);
-            
-            // الآدمن فقط يرسل أمر الانتقال للتصويت بعد 7 ثوانٍ
-            if (data.admin === inputName.value.trim()) {
-                setTimeout(async () => {
-                    await updateDoc(doc(db, "rooms", code), { status: "voting" });
-                }, 7000); 
-            }
-            // حالة إعلان النتيجة
-           if (data.status === "result") {
-           showFinalResult(data);
-           }
-        }
-        
-
-        // حالة التصويت
-        if (data.status === "voting") {
-            showVotingUI(code, data);
+            showRoleCard(data, isAdmin, code);
+        } else if (data.status === "voting") {
+            showVotingUI(code, data, isAdmin);
+        } else if (data.status === "result") {
+            showFinalResult(data);
         }
     });
 }
 
-// دالة لعرض الكرت السري
-function showRoleCard(data) {
-    const myName = inputName.value.trim();
-    const myRole = data.roles[myName] || "مراقب";
+function showRoleCard(data, isAdmin, code) {
     setupSection.style.display = "none";
     lobbySection.style.display = "block";
     
+    const myName = inputName.value.trim();
+    const myRole = data.roles[myName] || "مراقب";
+
     lobbySection.innerHTML = `
         <div class="role-card">
-            <h2 style="color: #ff3366; margin-bottom: 10px;">بدأت اللعبة!</h2>
-            <p style="color: #888;">دورك السري هو:</p>
-            <h1 style="font-size: 3.5rem; margin: 20px 0; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.2);">${myRole}</h1>
-            <div style="background: rgba(255,51,102,0.1); padding: 10px; border-radius: 10px; font-size: 0.9rem;">
-                🤫 سيتم فتح التصويت تلقائياً بعد قليل...
-            </div>
+            <h2 style="color: #ff3366;">دورك السري</h2>
+            <h1 style="font-size: 3rem; margin: 15px 0;">${myRole}</h1>
+            ${isAdmin ? `<button id="btnManualVote" class="btn-primary" style="background:#ffc107; color:#000;">بدء التصويت للكل 🗳️</button>` : `<p style="color:#888;">بانتظار الآدمن لبدء التصويت...</p>`}
         </div>
     `;
+
+    if (isAdmin) {
+        const btn = document.getElementById('btnManualVote');
+        if(btn) btn.onclick = async () => {
+            await updateDoc(doc(db, "rooms", code), { status: "voting" });
+        };
+    }
 }
 
-// توزيع الأدوار وبدء اللعبة
+// بدء اللعبة وتوزيع الأدوار
 startGameBtn.addEventListener('click', async () => {
     const code = displayRoomCode.innerText;
     const roomRef = doc(db, "rooms", code);
@@ -137,32 +133,26 @@ startGameBtn.addEventListener('click', async () => {
 
     const shuffled = [...players].sort(() => 0.5 - Math.random());
     const roles = {};
-    const votesInitial = {};
+    const votesInit = {};
     
     const mafiaCount = Math.max(1, Math.floor(players.length / 4));
     
-    shuffled.forEach((player, index) => {
-        votesInitial[player] = 0; // تجهيز عداد الأصوات لكل لاعب
-        if (index < mafiaCount) {
-            roles[player] = "🕵️‍♂️ مافيا";
-        } else if (index === mafiaCount) {
-            roles[player] = "🩺 طبيب";
-        } else if (index === mafiaCount + 1 && players.length > 5) {
-            roles[player] = "🔍 محقق";
-        } else {
-            roles[player] = "👷 مواطن";
-        }
+    shuffled.forEach((p, i) => {
+        votesInit[p] = 0;
+        if (i < mafiaCount) roles[p] = "🕵️‍♂️ مافيا";
+        else if (i === mafiaCount) roles[p] = "🩺 طبيب";
+        else roles[p] = "👷 مواطن";
     });
 
     await updateDoc(roomRef, {
         status: "started",
         roles: roles,
-        votes: votesInitial,
+        votes: votesInit,
         hasVoted: []
     });
 });
 
-function showVotingUI(code, data) {
+function showVotingUI(code, data, isAdmin) {
     setupSection.style.display = "none";
     lobbySection.style.display = "none";
     votingSection.style.display = "block";
@@ -173,68 +163,51 @@ function showVotingUI(code, data) {
     data.players.forEach(player => {
         const div = document.createElement('div');
         div.className = "vote-card";
-        const currentVotes = (data.votes && data.votes[player]) ? data.votes[player] : 0;
+        const vCount = (data.votes && data.votes[player]) ? data.votes[player] : 0;
 
-        div.innerHTML = `
-            <span class="vote-count-badge">${currentVotes}</span>
-            <span class="player-name">${player}</span>
-        `;
+        div.innerHTML = `<span class="vote-count-badge">${vCount}</span><span>${player}</span>`;
 
         div.onclick = async () => {
             const myName = inputName.value.trim();
-            if (data.hasVoted && data.hasVoted.includes(myName)) {
-                alert("صوّتت مرة، حاج طمع! 😂");
-                return;
-            }
-
-            const roomRef = doc(db, "rooms", code);
-            await updateDoc(roomRef, {
-                [`votes.${player}`]: currentVotes + 1,
+            if (data.hasVoted && data.hasVoted.includes(myName)) return alert("صوّتت وخلصنا! 😂");
+            
+            await updateDoc(doc(db, "rooms", code), {
+                [`votes.${player}`]: vCount + 1,
                 "hasVoted": arrayUnion(myName)
             });
-            document.getElementById('voteStatus').innerText = "تم إرسال صوتك بسرية.. 🤫";
         };
         votingList.appendChild(div);
     });
+
+    // زر إنهاء التصويت للآدمن
+    if (isAdmin) {
+        endVotingBtn.style.display = "block";
+        endVotingBtn.onclick = async () => {
+            const votes = data.votes || {};
+            if (Object.keys(votes).length === 0) return alert("ما حدا صوّت!");
+            const winner = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
+            await updateDoc(doc(db, "rooms", code), { status: "result", eliminated: winner });
+        };
+    }
+}
+
+function showFinalResult(data) {
+    votingSection.style.display = "none";
+    const lobby = document.getElementById('lobby-section');
+    lobby.style.display = "block";
+    
+    lobby.innerHTML = `
+        <div class="role-card" style="border-color:#ff3366;">
+            <h2>النتيجة النهائية ⚖️</h2>
+            <p>تم طرد:</p>
+            <h1 style="font-size: 3rem; color: #fff;">💀 ${data.eliminated} 💀</h1>
+            <button onclick="location.reload()" class="btn-secondary">لعبة جديدة 🔄</button>
+        </div>
+    `;
 }
 
 function showLobby(code) {
     setupSection.style.display = "none";
     lobbySection.style.display = "block";
     displayRoomCode.innerText = code;
-}
-const endBtn = document.getElementById('endVotingBtn');
-
-// إظهار زر الإنهاء للآدمن فقط
-if (data.admin === inputName.value.trim()) {
-    endBtn.style.display = "block";
-}
-
-endBtn.onclick = async () => {
-    const roomRef = doc(db, "rooms", code);
-    const votes = data.votes || {};
-    
-    // البحث عن الشخص اللي أخد أعلى أصوات
-    let target = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
-    
-    await updateDoc(roomRef, {
-        status: "result",
-        eliminated: target
-    });
-};
-function showFinalResult(data) {
-    const votingSection = document.getElementById('voting-section');
-    const finalResult = document.getElementById('finalResult');
-    
-    votingSection.innerHTML = `
-        <div class="role-card" style="border-color: #ff3366; animation: flipIn 1s;">
-            <h2 style="color: #ff3366;">تم اتخاذ القرار! ⚖️</h2>
-            <p style="margin: 20px 0; font-size: 1.2rem;">القرية قررت طرد:</p>
-            <h1 style="font-size: 3rem; color: #fff;">💀 ${data.eliminated} 💀</h1>
-            <p style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; margin-top: 15px;">
-                هل كان هو المافيا حقاً؟.. اللعبة مستمرة!
-            </p>
-            <button onclick="location.reload()" class="btn-secondary">لعبة جديدة 🔄</button>
-        </div>
-    `;
 }
