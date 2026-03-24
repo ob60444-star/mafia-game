@@ -4,7 +4,7 @@
   "description": "لعبة ذكاء وتواصل اجتماعي",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/1022/1022313.png",
+      "src": "icon.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
