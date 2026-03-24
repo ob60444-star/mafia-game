@@ -81,6 +81,19 @@ button:active {
 }
 
 p {
+    /* حركة ظهور ناعمة للكرت */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#lobby-section div {
+    animation: fadeIn 0.8s ease-out;
+    border: 2px solid #ff3366;
+    box-shadow: 0 0 20px rgba(255, 51, 102, 0.2);
+    padding: 30px;
+    border-radius: 20px;
+}
     margin: 15px 0;
     color: #666;
     font-weight: bold;
