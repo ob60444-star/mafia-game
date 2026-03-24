@@ -95,7 +95,12 @@ function startListening(code) {
                     await updateDoc(doc(db, "rooms", code), { status: "voting" });
                 }, 7000); 
             }
+            // حالة إعلان النتيجة
+           if (data.status === "result") {
+           showFinalResult(data);
+           }
         }
+        
 
         // حالة التصويت
         if (data.status === "voting") {
@@ -197,4 +202,39 @@ function showLobby(code) {
     setupSection.style.display = "none";
     lobbySection.style.display = "block";
     displayRoomCode.innerText = code;
+}
+const endBtn = document.getElementById('endVotingBtn');
+
+// إظهار زر الإنهاء للآدمن فقط
+if (data.admin === inputName.value.trim()) {
+    endBtn.style.display = "block";
+}
+
+endBtn.onclick = async () => {
+    const roomRef = doc(db, "rooms", code);
+    const votes = data.votes || {};
+    
+    // البحث عن الشخص اللي أخد أعلى أصوات
+    let target = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
+    
+    await updateDoc(roomRef, {
+        status: "result",
+        eliminated: target
+    });
+};
+function showFinalResult(data) {
+    const votingSection = document.getElementById('voting-section');
+    const finalResult = document.getElementById('finalResult');
+    
+    votingSection.innerHTML = `
+        <div class="role-card" style="border-color: #ff3366; animation: flipIn 1s;">
+            <h2 style="color: #ff3366;">تم اتخاذ القرار! ⚖️</h2>
+            <p style="margin: 20px 0; font-size: 1.2rem;">القرية قررت طرد:</p>
+            <h1 style="font-size: 3rem; color: #fff;">💀 ${data.eliminated} 💀</h1>
+            <p style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; margin-top: 15px;">
+                هل كان هو المافيا حقاً؟.. اللعبة مستمرة!
+            </p>
+            <button onclick="location.reload()" class="btn-secondary">لعبة جديدة 🔄</button>
+        </div>
+    `;
 }
