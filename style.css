@@ -1,0 +1,87 @@
+/* تنسيقات عامة لتناسب كل الشاشات */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #121212; /* أسود ملكي */
+    color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px; /* فراغ صغير مشان ما يلزق الحكي بحواف الموبايل */
+}
+
+.main-card {
+    background-color: #1e1e1e;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+    width: 100%; /* العرض كامل */
+    max-width: 400px; /* بس ما يتجاوز الـ 400 بكسل على الشاشات الكبيرة */
+    border: 1px solid #333;
+}
+
+h1 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: #ff3366;
+    text-shadow: 0 0 15px rgba(255, 51, 102, 0.3);
+}
+
+input {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1rem;
+    text-align: center;
+    outline: none;
+    transition: 0.3s;
+}
+
+input:focus {
+    border-color: #ff3366;
+    background-color: #333;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
+}
+
+button:active {
+    transform: scale(0.98); /* تأثير ضغطة الزر */
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #ff3366, #ff6b6b);
+    color: white;
+    margin-bottom: 15px;
+}
+
+.btn-secondary {
+    background-color: #333;
+    color: #bbb;
+    border: 1px solid #444;
+}
+
+p {
+    margin: 15px 0;
+    color: #666;
+    font-weight: bold;
+}
