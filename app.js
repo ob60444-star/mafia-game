@@ -222,3 +222,10 @@ function showLobby(code) {
     lobbySection.style.display = "block";
     displayRoomCode.innerText = code;
 }
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('تم تسجيل الـ SW بنجاح!', reg))
+            .catch(err => console.log('فشل تسجيل الـ SW', err));
+    });
+}
