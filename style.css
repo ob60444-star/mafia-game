@@ -17,19 +17,18 @@ body {
     margin: 0;
     overflow-x: hidden;
 }
-
 .main-card {
     background: var(--card-bg);
-    padding: 40px;
-    border-radius: 30px;
+    padding: 25px; /* تقليل الحواف شوي للموبايل */
+    border-radius: 25px;
     text-align: center;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 20px rgba(255, 51, 102, 0.1);
-    width: 90%;
-    max-width: 450px;
-    border: 1px solid #333;
-    transition: all 0.5s ease;
-    animation: slideUp 0.8s ease-out;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+    width: 95%; /* ياخد عرض الشاشة */
+    max-width: 400px; /* ما يكبر كتير على اللابتوب */
+    margin: 10px;
+    box-sizing: border-box; /* مشان الحواف ما تطلع لبرة */
 }
+
 
 /* حركة دخول الكرت الرئيسي */
 @keyframes slideUp {
@@ -146,12 +145,7 @@ ul#playersList li {
 }
 
 .fade-out { opacity: 0; pointer-events: none; }
-.voting-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-top: 20px;
-}
+
 
 .vote-card {
     background: #252525;
@@ -161,7 +155,13 @@ ul#playersList li {
     cursor: pointer;
     transition: 0.3s;
 }
-
+.voting-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* عمودين */
+    gap: 12px;
+    margin-top: 20px;
+    width: 100%;
+}
 .vote-card:hover {
     border-color: var(--primary);
     background: #2a2a2a;
@@ -182,3 +182,7 @@ ul#playersList li {
     font-size: 0.8rem;
     float: left;
 }
+@media (max-width: 360px) {
+    .voting-grid {
+        grid-template-columns: 1fr; /* عمود واحد للموبايلات الصغيرة كتير */
+    }
