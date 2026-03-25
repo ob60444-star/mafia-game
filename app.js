@@ -111,15 +111,25 @@ function showDoctorTurn(code, data) {
     }
 }
 window.doctorSave = async (code, target) => { await updateDoc(doc(db, "rooms", code), { "nightActions.saved": target, status: "night_detective" }); };
-
 function showDetectiveTurn(code, data) {
     const myName = inputName.value.trim();
+    // إذا كان اللاعب هو الشرطي وهو لساته عايش
     if (data.roles[myName] === "👮 شرطي" && data.alivePlayers.includes(myName)) {
-        lobbySection.innerHTML = `<div class="role-card"><h2>سيادة الشرطي.. مين شاكك فيه؟ 🔍</h2><div class="voting-grid">${data.alivePlayers.filter(p=>p!==myName).map(p=>`<button class="btn-secondary" onclick="detectiveCheck('${code}','${p}','${data.roles[p]}')">${p}</button>`).join('')}</div></div>`;
+        lobbySection.innerHTML = `
+            <div class="role-card" style="border-color: #007bff;">
+                <h2 style="color: #007bff;">سيادة الشرطي.. مين شاكك فيه؟ 🔍</h2>
+                <div class="voting-grid">
+                    ${data.alivePlayers.filter(p=>p!==myName).map(p=>`
+                        <button class="btn-secondary" onclick="detectiveCheck('${code}','${p}','${data.roles[p]}')">${p}</button>
+                    `).join('')}
+                </div>
+            </div>`;
     } else {
-        lobbySection.innerHTML = `<div class="role-card"><h1>👮</h1><h2>الشرطي يحقق..</h2></div>`;
+        // باقي اللاعبين بيشوفوا هاي الشاشة بس
+        lobbySection.innerHTML = `<div class="role-card"><h1>👮</h1><h2>الشرطي يحقق..</h2><p>العدالة قادمة!</p></div>`;
     }
 }
+
 window.detectiveCheck = async (code, target, role) => {
     alert(`اللاعب ${target} هو: ${role === "🕵️‍♂️ مافيا" ? "مافيا! 🔥" : "مواطن شريف ✅"}`);
     await updateDoc(doc(db, "rooms", code), { status: "morning_result" });
