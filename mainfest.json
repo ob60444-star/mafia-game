@@ -1,19 +1,17 @@
 {
   "short_name": "مافيا",
   "name": "لعبة المافيا العربية",
-  "description": "لعبة ذكاء وتواصل اجتماعي",
+  "description": "لعبة ذكاء جماعية",
   "icons": [
     {
       "src": "icon.png",
       "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any"
+      "sizes": "192x192"
     },
     {
       "src": "icon.png",
       "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any"
+      "sizes": "512x512"
     }
   ],
   "start_url": "./index.html",
