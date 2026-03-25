@@ -1,7 +1,6 @@
 {
   "short_name": "مافيا",
   "name": "لعبة المافيا العربية",
-  "description": "لعبة ذكاء جماعية",
   "icons": [
     {
       "src": "icon.png",
@@ -14,9 +13,8 @@
       "sizes": "512x512"
     }
   ],
-  "start_url": "./index.html",
+  "start_url": "/mafia-game/",
   "display": "standalone",
-  "orientation": "portrait",
   "theme_color": "#0f0f0f",
   "background_color": "#0f0f0f"
 }
