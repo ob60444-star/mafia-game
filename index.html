@@ -2,52 +2,63 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>لعبة المافيا العربية</title>
+    
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>لعبة المافيا</title>
+
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
+
     <div id="splash-screen">
-    <div class="loader-content">
-        <h1 class="pulse">🕵️‍♂️</h1>
-        <p>جاري تحضير العصابة...</p>
+        <div class="loader-content">
+            <h1 class="pulse">🕵️‍♂️</h1>
+            <p>جاري تحضير العصابة...</p>
+        </div>
     </div>
-</div>
+
     <div class="main-card">
-        <h1>🕵️‍♂️ لعبة المافيا</h1>
+        <h1>🕵️‍♂️ المافيا</h1>
 
         <div id="setup-section">
             <input type="text" id="playerName" placeholder="اكتب اسمك هون...">
             <button id="createRoomBtn" class="btn-primary">أنشئ غرفة جديدة</button>
-            <p>أو</p>
+            <p style="margin: 15px 0; color: #666;">أو</p>
             <input type="text" id="roomCodeInput" placeholder="دخل رمز الغرفة...">
             <button id="joinRoomBtn" class="btn-secondary">انضم للغرفة</button>
         </div>
 
         <div id="lobby-section" style="display: none;">
             <h3>رمز الغرفة: <span id="displayRoomCode" style="color: #ff3366;">----</span></h3>
-            <hr style="margin: 15px 0; border: 0.5px solid #444;">
+            <hr style="margin: 20px 0; border: 0.5px solid #333;">
             <h4>اللاعبون المتصلون:</h4>
-            <ul id="playersList" style="list-style: none; padding: 0; margin: 15px 0; text-align: right;">
-                </ul>
+            <ul id="playersList"></ul>
             <button id="startGameBtn" class="btn-primary" style="background: #28a745; display: none;">بدء اللعبة! 🚀</button>
-            <p style="font-size: 0.8rem; color: #888;">بانتظار دخول باقي اللاعبين...</p>
-            <button id="startVotingBtn" class="btn-secondary" style="background: #ffc107; color: #000; display: none; margin-top: 10px;">بدء التصويت الآن 🗳️</button>
+            <p id="waitingMsg" style="font-size: 0.9rem; color: #888; margin-top: 15px;">بانتظار الآدمن يبدأ...</p>
         </div>
+
         <div id="voting-section" style="display: none;">
-    <h2 style="color: #ff3366;">وقت المحاكمة ⚖️</h2>
-    <p style="color: #888; margin-bottom: 20px;">صوّت للشخص اللي بتشك إنه مافيا</p>
-    <div id="votingList" class="voting-grid"></div>
-    <div id="voteStatus" style="margin-top: 20px; color: var(--secondary); font-weight: bold;"></div>
-    <button id="endVotingBtn" class="btn-primary" style="background: #dc3545; display: none; margin-top: 20px;">إنهاء التصويت وإعلان النتيجة 📢</button>
-    <div id="finalResult" class="role-card" style="display: none;"></div>
-</div>
+            <h2 style="color: #ff3366;">وقت المحاكمة ⚖️</h2>
+            <p style="color: #888; margin-bottom: 20px;">صوّت للشخص اللي بتشك إنه مافيا</p>
+            <div id="votingList" class="voting-grid"></div>
+            <button id="endVotingBtn" class="btn-primary" style="background: #dc3545; display: none; margin-top: 25px;">إنهاء التصويت وإعلان النتيجة 📢</button>
+        </div>
     </div>
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('✅ SW Registered'))
+                    .catch(err => console.log('❌ SW Failed', err));
+            });
+        }
+    </script>
     <script type="module" src="app.js"></script>
 </body>
 </html>
