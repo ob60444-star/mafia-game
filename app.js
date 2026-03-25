@@ -58,45 +58,161 @@ function startListening(code) {
         const isAdmin = data.admin === myName;
 
         if (playersListUI) playersListUI.innerHTML = data.players.map(p => `<li>👤 ${p}</li>`).join('');
-        if (isAdmin && data.players.length >= 3 && data.status === "waiting") startGameBtn.style.display = "block";
+        
+        // إدارة ظهور زر البدء
+        if (isAdmin && data.players.length >= 3 && data.status === "waiting") {
+            startGameBtn.style.display = "block";
+        } else {
+            startGameBtn.style.display = "none";
+        }
 
-        if (data.status === "started") showRoleCard(data, isAdmin, code);
-        else if (data.status === "voting") showVotingUI(code, data, isAdmin);
-        else if (data.status === "result") showFinalResult(data);
+        // تحويل الحالات (Logic Switch)
+        if (data.status === "night_mafia") {
+            showMafiaTurn(code, data);
+        } else if (data.status === "night_doctor") {
+            showDoctorTurn(code, data);
+        } else if (data.status === "morning_result") {
+            showMorningResult(data);
+        } else if (data.status === "voting") {
+            showVotingUI(code, data, isAdmin);
+        } else if (data.status === "result") {
+            showFinalResult(data);
+        }
     });
 }
 
-function showRoleCard(data, isAdmin, code) {
-    setupSection.style.display = "none";
-    lobbySection.style.display = "block";
-    const myRole = data.roles[inputName.value.trim()] || "مراقب";
-    lobbySection.innerHTML = `
-        <div class="role-card">
-            <h2>دورك السري هو</h2>
-            <h1 style="font-size: 3rem; margin: 20px 0; color: #ff3366;">${myRole}</h1>
-            ${isAdmin ? `<button id="btnStartVote" class="btn-primary" style="background:#ffc107; color:#000;">بدء التصويت للكل 🗳️</button>` : `<p>بانتظار الآدمن...</p>`}
-        </div>
-    `;
-    if (isAdmin) document.getElementById('btnStartVote').onclick = () => updateDoc(doc(db, "rooms", code), { status: "voting" });
+function showLobby(code) { 
+    setupSection.style.display = "none"; 
+    lobbySection.style.display = "block"; 
+    displayRoomCode.innerText = code; 
 }
 
+// دالة بدء اللعبة وتوزيع الأدوار
 startGameBtn.onclick = async () => {
     const code = displayRoomCode.innerText;
-    const roomSnap = await getDoc(doc(db, "rooms", code));
+    const roomRef = doc(db, "rooms", code);
+    const roomSnap = await getDoc(roomRef);
     const players = roomSnap.data().players;
+
     const shuffled = [...players].sort(() => 0.5 - Math.random());
-    const roles = {}; const votesInit = {};
+    const roles = {};
     shuffled.forEach((p, i) => {
-        votesInit[p] = 0;
         if (i === 0) roles[p] = "🕵️‍♂️ مافيا";
         else if (i === 1) roles[p] = "🩺 طبيب";
         else roles[p] = "👷 مواطن";
     });
-    await updateDoc(doc(db, "rooms", code), { status: "started", roles: roles, votes: votesInit });
+
+    await updateDoc(roomRef, {
+        status: "night_mafia", 
+        roles: roles,
+        votes: {},      
+        hasVoted: [],
+        nightActions: { killed: "", saved: "" } 
+    });
 };
 
+// --- مرحلة ليل المافيا ---
+function showMafiaTurn(code, data) {
+    const myName = inputName.value.trim();
+    const myRole = data.roles[myName];
+    setupSection.style.display = "none";
+    lobbySection.style.display = "block";
+
+    if (myRole === "🕵️‍♂️ مافيا") {
+        lobbySection.innerHTML = `
+            <div class="role-card" style="border-color: #ff3366;">
+                <h2 style="color: #ff3366;">سكينك جاهزة؟ 🔪</h2>
+                <p>اختار الضحية لتبدأ الجريمة..</p>
+                <div class="voting-grid">
+                    ${data.players.filter(p => p !== myName).map(p => `
+                        <button class="btn-secondary" onclick="mafiaKill('${code}', '${p}')">${p}</button>
+                    `).join('')}
+                </div>
+            </div>`;
+    } else {
+        lobbySection.innerHTML = `
+            <div class="role-card">
+                <h1 style="font-size: 4rem;">🌙</h1>
+                <h2>ليل مرعب..</h2>
+                <p>المافيا عم يختاروا ضحيتهم هلق.. استر ببيتك!</p>
+            </div>`;
+    }
+}
+
+window.mafiaKill = async (code, target) => {
+    await updateDoc(doc(db, "rooms", code), { 
+        "nightActions.killed": target,
+        "status": "night_doctor" 
+    });
+};
+
+// --- مرحلة ليل الطبيب ---
+function showDoctorTurn(code, data) {
+    const myName = inputName.value.trim();
+    const myRole = data.roles[myName];
+    setupSection.style.display = "none";
+    lobbySection.style.display = "block";
+
+    if (myRole === "🩺 طبيب") {
+        lobbySection.innerHTML = `
+            <div class="role-card" style="border-color: #28a745;">
+                <h2 style="color: #ff3366;">خبر عاجل: تم قتل أحد اللاعبين! 💀</h2>
+                <p>يا حكيم.. معك فرصة وحدة لتنقذ حدا، مين هو؟</p>
+                <div class="voting-grid">
+                    ${data.players.map(p => `
+                        <button class="btn-secondary" style="border: 1px solid #28a745;" onclick="doctorSave('${code}', '${p}')">${p}</button>
+                    `).join('')}
+                </div>
+            </div>`;
+    } else {
+        lobbySection.innerHTML = `
+            <div class="role-card">
+                <h1 style="font-size: 4rem;">🚑</h1>
+                <h2>الإسعاف في الطريق..</h2>
+                <p>المافيا ضربوا ضربتهم، والطبيب عم يحاول ينقذ الموقف!</p>
+            </div>`;
+    }
+}
+
+window.doctorSave = async (code, target) => {
+    await updateDoc(doc(db, "rooms", code), { 
+        "nightActions.saved": target,
+        "status": "morning_result" 
+    });
+};
+
+// --- مرحلة نتيجة الصباح ---
+function showMorningResult(data) {
+    setupSection.style.display = "none";
+    lobbySection.style.display = "block";
+    const killed = data.nightActions.killed;
+    const saved = data.nightActions.saved;
+
+    let message = "";
+    let icon = "☀️";
+
+    if (killed === saved) {
+        message = `المافيا حاولوا يقتلوا <b>${killed}</b>، بس الطبيب البطل كان أسرع وأنقذه! <br> صرنا الصبح وما حدا مات.`;
+        icon = "😇";
+    } else {
+        message = `للأسف.. القرية صحيت على خبر حزين. المافيا غدروا بـ <b>${killed}</b> ومات!`;
+        icon = "💀";
+    }
+
+    lobbySection.innerHTML = `
+        <div class="role-card">
+            <h1 style="font-size: 4rem;">${icon}</h1>
+            <h2>طلع الصبح!</h2>
+            <p style="font-size: 1.2rem; margin: 20px 0;">${message}</p>
+            <button class="btn-primary" onclick="location.reload()">العودة للرئيسية 🔄</button>
+        </div>`;
+}
+
+// --- نظام التصويت والنتائج النهائية (اختياري حالياً) ---
 function showVotingUI(code, data, isAdmin) {
-    setupSection.style.display = "none"; lobbySection.style.display = "none"; votingSection.style.display = "block";
+    setupSection.style.display = "none"; 
+    lobbySection.style.display = "none"; 
+    votingSection.style.display = "block";
     const vList = document.getElementById('votingList');
     vList.innerHTML = data.players.map(p => `
         <div class="vote-card" onclick="vote('${code}', '${p}')">
@@ -122,7 +238,8 @@ window.vote = async (code, target) => {
 };
 
 function showFinalResult(data) {
-    votingSection.style.display = "none"; lobbySection.style.display = "block";
+    votingSection.style.display = "none"; 
+    lobbySection.style.display = "block";
     lobbySection.innerHTML = `
         <div class="role-card">
             <h2>النتيجة النهائية ⚖️</h2>
@@ -132,5 +249,3 @@ function showFinalResult(data) {
         </div>
     `;
 }
-
-function showLobby(code) { setupSection.style.display = "none"; lobbySection.style.display = "block"; displayRoomCode.innerText = code; }
