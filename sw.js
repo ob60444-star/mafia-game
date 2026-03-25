@@ -1,16 +1,10 @@
-const cacheName = 'mafia-v1';
-const assets = ['./', './index.html'];
+const CACHE_NAME = 'mafia-v1';
+const assets = ['./', './index.html', './style.css', './app.js'];
 
 self.addEventListener('install', (e) => {
-    e.waitUntil(
-        caches.open(cacheName).then((cache) => {
-            return cache.addAll(assets);
-        })
-    );
+    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(assets)));
 });
 
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        fetch(event.request).catch(() => caches.match(event.request))
-    );
+self.addEventListener('fetch', (e) => {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
 });
