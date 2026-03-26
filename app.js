@@ -76,7 +76,7 @@ function showDoctorTurn(code, data, isAlive) {
 }
 window.doctorSave = async (code, target) => { await updateDoc(doc(db, "rooms", code), { "nightActions.saved": target, status: "night_detective" }); };
 
-// --- الشرطي (التعديل المطلوب: كروت والجواب عليها) ---
+// --- الشرطي ---
 function showDetectiveTurn(code, data, isAlive) {
     const myName = inputName.value.trim();
     if (data.roles[myName] === "👮 شرطي" && isAlive) {
@@ -98,36 +98,63 @@ window.detCheck = (btn, code, target, role) => {
 async function showMorningResult(code, data, isAdmin) {
     const killed = data.nightActions.killed;
     const saved = data.nightActions.saved;
-    const finalKilled = killed !== saved ? killed : null;
 
-    if (isAdmin && killed !== "") {
-        let newAlive = [...data.alivePlayers];
-        if (finalKilled) newAlive = newAlive.filter(p => p !== finalKilled);
-        await updateDoc(doc(db, "rooms", code), { alivePlayers: newAlive, "nightActions.killed": "" });
+    let resultMsg = "";
+    let finalKilled = null;
+
+    // معالجة النتيجة بناءً على اختيارات المافيا والطبيب
+    if (killed && killed === saved) {
+        resultMsg = "ما حدا مات، الشخص اللي انقتل شفاه الطبيب! 🛡️";
+    } else if (killed && killed !== saved) {
+        finalKilled = killed;
+        resultMsg = `للأسف.. مات <b>${finalKilled}</b> 💀`;
+    } else {
+        resultMsg = "ليلة هادئة.. نجا الجميع! ☀️";
+    }
+
+    // تحديث قاعدة البيانات للمشرف فقط وتحديث مصفوفة الأحياء
+    if (isAdmin && finalKilled && data.alivePlayers.includes(finalKilled)) {
+        let newAlive = data.alivePlayers.filter(p => p !== finalKilled);
+        await updateDoc(doc(db, "rooms", code), { alivePlayers: newAlive });
         await checkWin(code, newAlive, data.roles);
     }
 
-    lobbySection.innerHTML = `<div class="role-card"><h1>☀️ الصباح</h1><p>${finalKilled ? `مات <b>${finalKilled}</b>` : "نجا الجميع!"}</p>
+    lobbySection.innerHTML = `<div class="role-card"><h1>☀️ الصباح</h1><p>${resultMsg}</p>
         ${isAdmin ? `<button class="btn-primary" onclick="startVote('${code}')">فتح التصويت 🗳️</button>` : ""}</div>`;
 }
 
-window.startVote = async (code) => { await updateDoc(doc(db, "rooms", code), { status: "voting", votes: {}, hasVoted: [], messages: [] }); };
+window.startVote = async (code) => { 
+    // تفريغ أحداث الليل هنا لضمان عدم اختفاء رسالة الصباح فجأة
+    await updateDoc(doc(db, "rooms", code), { 
+        status: "voting", 
+        votes: {}, 
+        hasVoted: [], 
+        messages: [],
+        "nightActions.killed": "",
+        "nightActions.saved": ""
+    }); 
+};
 
-// --- التصويت والشات (الميت لا يشارك) ---
+// --- التصويت والشات ---
 function showVotingUI(code, data, isAdmin, isAlive) {
     votingSection.style.display = "block"; lobbySection.style.display = "none";
     
-    // الميت لا يرى أزرار التصويت
+    // تصميم واضح لأزرار التصويت للجميع لضمان القدرة على التصويت على المافيا
     document.getElementById('votingList').innerHTML = data.alivePlayers.map(p => `
-        <div class="vote-card" ${isAlive ? `onclick="vote('${code}', '${p}')"` : ""}>
-            <span class="vote-count-badge">${data.votes[p] || 0}</span> ${p}
+        <div class="vote-card" style="cursor:pointer; border:1px solid #ccc; padding:10px; margin:5px; border-radius:5px; background:#f8f9fa;" ${isAlive ? `onclick="vote('${code}', '${p}')"` : ""}>
+            <span class="vote-count-badge" style="font-weight:bold; color:#dc3545;">[ ${data.votes[p] || 0} ]</span> التصويت لـ <b>${p}</b>
         </div>`).join('');
 
-    // الشات (يختفي للميت)
+    // الشات
     if (!document.getElementById('chat-area')) {
-        votingSection.insertAdjacentHTML('beforeend', `<div id="chat-area">${isAlive ? `<div id="chat-box"></div><input id="chatInput"><button onclick="sendMsg('${code}')">ارسل</button>` : `<h2>💀 الأموات لا يتكلمون</h2>`}</div>`);
+        votingSection.insertAdjacentHTML('beforeend', `<div id="chat-area" style="margin-top:20px;">${isAlive ? `<div id="chat-box" style="height:150px; overflow-y:scroll; border:1px solid #ddd; padding:10px; margin-bottom:10px; background:#fff;"></div><input id="chatInput" placeholder="اكتب رسالة..." style="width:70%; padding:5px;"><button onclick="sendMsg('${code}')" style="width:25%; padding:5px;">ارسل</button>` : `<h2>💀 الأموات لا يتكلمون</h2>`}</div>`);
     }
-    if (isAlive) document.getElementById('chat-box').innerHTML = data.messages.map(m => `<p><b>${m.user}:</b> ${m.text}</p>`).join('');
+    
+    if (isAlive) {
+        const chatBox = document.getElementById('chat-box');
+        chatBox.innerHTML = data.messages.map(m => `<p style="margin:5px 0;"><b>${m.user}:</b> ${m.text}</p>`).join('');
+        chatBox.scrollTop = chatBox.scrollHeight; // النزول التلقائي لآخر رسالة
+    }
 
     if (isAdmin) {
         endVotingBtn.style.display = "block";
@@ -140,13 +167,17 @@ window.vote = async (code, target) => {
     const roomRef = doc(db, "rooms", code);
     const snap = await getDoc(roomRef);
     const data = snap.data();
+    
     if (data.hasVoted.includes(myName) || !data.alivePlayers.includes(myName)) return;
+    
+    // إعطاء المواطن صوتين وباقي الأدوار صوت واحد
     const weight = data.roles[myName] === "👷 مواطن" ? 2 : 1;
     await updateDoc(roomRef, { [`votes.${target}`]: (data.votes[target] || 0) + weight, hasVoted: arrayUnion(myName) });
 };
 
 window.sendMsg = async (code) => {
     const text = document.getElementById('chatInput').value;
+    if(!text.trim()) return;
     await updateDoc(doc(db, "rooms", code), { messages: arrayUnion({ user: inputName.value, text: text }) });
     document.getElementById('chatInput').value = "";
 };
@@ -154,14 +185,25 @@ window.sendMsg = async (code) => {
 // --- إنهاء التصويت والعودة لليل ---
 async function handleEndVote(code, data) {
     const votes = data.votes;
-    const max = Math.max(...Object.values(votes));
-    const winners = Object.keys(votes).filter(p => votes[p] === max);
+    const keys = Object.keys(votes);
     
-    if (winners.length > 1 || winners.length === 0) {
+    if (keys.length === 0) {
+        alert("لم يصوت أحد! يجب التصويت قبل إنهاء الجولة.");
+        return;
+    }
+
+    const max = Math.max(...Object.values(votes));
+    const winners = keys.filter(p => votes[p] === max);
+    
+    if (winners.length > 1) {
         alert("تعادل! أعيدوا التصويت.");
         await updateDoc(doc(db, "rooms", code), { votes: {}, hasVoted: [] });
     } else {
-        const newAlive = data.alivePlayers.filter(p => p !== winners[0]);
+        const eliminated = winners[0];
+        const newAlive = data.alivePlayers.filter(p => p !== eliminated);
+        
+        // إزالة اللاعب المطرود من مصفوفة الأحياء فوراً
+        await updateDoc(doc(db, "rooms", code), { alivePlayers: newAlive });
         await checkWin(code, newAlive, data.roles, true); 
     }
 }
@@ -170,28 +212,34 @@ async function checkWin(code, alivePlayers, roles, nextNight = false) {
     const mafia = alivePlayers.filter(p => roles[p] === "🕵️‍♂️ مافيا");
     const citizens = alivePlayers.filter(p => roles[p] !== "🕵️‍♂️ مافيا");
 
-    if (mafia.length === 0) await updateDoc(doc(db, "rooms", code), { status: "game_over", winner: "المواطنين 🎉" });
-    else if (mafia.length >= citizens.length) await updateDoc(doc(db, "rooms", code), { status: "game_over", winner: "المافيا 😈" });
-    else if (nextNight) await updateDoc(doc(db, "rooms", code), { status: "night_mafia", votes: {}, hasVoted: [] });
-    else await updateDoc(doc(db, "rooms", code), { alivePlayers: alivePlayers });
+    if (mafia.length === 0) {
+        await updateDoc(doc(db, "rooms", code), { status: "game_over", winner: "المواطنين 🎉" });
+    } else if (mafia.length >= citizens.length) {
+        await updateDoc(doc(db, "rooms", code), { status: "game_over", winner: "المافيا 😈" });
+    } else if (nextNight) {
+        await updateDoc(doc(db, "rooms", code), { status: "night_mafia", votes: {}, hasVoted: [] });
+    }
 }
 
 function showGameOver(data) {
     votingSection.style.display = "none"; lobbySection.style.display = "block";
-    lobbySection.innerHTML = `<div class="role-card"><h1>انتهت اللعبة!</h1><h2>الفوز لـ ${data.winner}</h2><button onclick="location.reload()">لعبة جديدة</button></div>`;
+    lobbySection.innerHTML = `<div class="role-card"><h1>انتهت اللعبة!</h1><h2>الفوز لـ ${data.winner}</h2><button class="btn-primary" onclick="location.reload()">لعبة جديدة</button></div>`;
 }
 
-// إنشاء وانضمام الغرف (نفس الكود السابق مع إضافة alivePlayers)
+// إنشاء وانضمام الغرف
 document.getElementById('createRoomBtn').onclick = async () => {
     const name = inputName.value.trim();
+    if(!name) return alert("الرجاء كتابة اسمك أولاً");
     const code = Math.floor(1000 + Math.random() * 9000).toString();
-    await setDoc(doc(db, "rooms", code), { admin: name, players: [name], alivePlayers: [name], status: "waiting", roles: {}, votes: {}, hasVoted: [], messages: [] });
+    await setDoc(doc(db, "rooms", code), { admin: name, players: [name], alivePlayers: [name], status: "waiting", roles: {}, votes: {}, hasVoted: [], messages: [], nightActions: {killed: "", saved: ""} });
     startListening(code);
     setupSection.style.display="none"; lobbySection.style.display="block"; document.getElementById('displayRoomCode').innerText=code;
 };
+
 document.getElementById('joinRoomBtn').onclick = async () => {
     const name = inputName.value.trim();
     const code = document.getElementById('roomCodeInput').value.trim();
+    if(!name || !code) return alert("الرجاء كتابة الاسم وكود الغرفة");
     const ref = doc(db, "rooms", code);
     await updateDoc(ref, { players: arrayUnion(name), alivePlayers: arrayUnion(name) });
     startListening(code);
