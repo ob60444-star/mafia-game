@@ -21,23 +21,36 @@ const startGameBtn = document.getElementById('startGameBtn');
 const endVotingBtn = document.getElementById('endVotingBtn');
 
 // --- نظام المراقبة اللحظي ---
-function startListening(code) {
+ function startListening(code) {
     onSnapshot(doc(db, "rooms", code), (snapshot) => {
         const data = snapshot.data();
         if (!data) return;
+
         const myName = inputName.value.trim();
         const isAdmin = data.admin === myName;
-        const isAlive = data.alivePlayers.includes(myName);
+        const isAlive = (data.alivePlayers || []).includes(myName);
 
-        // قائمة اللاعبين وحالتهم
-        document.getElementById('playersList').innerHTML = data.players.map(p => 
-            `<li>${data.alivePlayers.includes(p) ? '👤' : '💀'} ${p} ${p === myName ? '(أنت)' : ''}</li>`
-        ).join('');
+        // --- التأكد من وجود قائمة اللاعبين قبل الكتابة فيها ---
+        const playersListElem = document.getElementById('playersList');
+        if (playersListElem) {
+            playersListElem.innerHTML = data.players.map(p => 
+                `<li>${(data.alivePlayers || []).includes(p) ? '👤' : '💀'} ${p} ${p === myName ? '(أنت)' : ''}</li>`
+            ).join('');
+        } else {
+            console.warn("⚠️ تحذير: العنصر 'playersList' غير موجود في صفحة الـ HTML حالياً.");
+        }
 
-        if (isAdmin && data.status === "waiting" && data.players.length >= 4) startGameBtn.style.display = "block";
-        else startGameBtn.style.display = "none";
+        // إظهار زر البدء للأدمن
+        if (startGameBtn) {
+            if (isAdmin && data.status === "waiting" && data.players.length >= 4) {
+                startGameBtn.style.display = "block";
+            } else {
+                startGameBtn.style.display = "none";
+            }
+        }
 
-        // التنقل بين الشاشات حسب الحالة
+        // --- الانتقال بين الشاشات ---
+        // ملاحظة: تأكد أن هذه الـ IDs موجودة في الـ HTML لديك
         if (data.status === "night_mafia") showMafiaTurn(code, data, isAlive);
         else if (data.status === "night_doctor") showDoctorTurn(code, data, isAlive);
         else if (data.status === "night_detective") showDetectiveTurn(code, data, isAlive);
