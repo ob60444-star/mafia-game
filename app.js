@@ -37,6 +37,41 @@ function startListening(code) {
         if (isAdmin && data.status === "waiting" && data.players.length >= 4) startGameBtn.style.display = "block";
         else startGameBtn.style.display = "none";
 
+        // دالة بدء اللعبة وتوزيع الأدوار
+startGameBtn.onclick = async () => {
+    const code = document.getElementById('displayRoomCode').innerText;
+    const roomRef = doc(db, "rooms", code);
+    const snap = await getDoc(roomRef);
+    const data = snap.data();
+    
+    if (data.players.length < 4) {
+        alert("لازم يكون في 4 لاعبين على الأقل!");
+        return;
+    }
+
+    let players = [...data.players];
+    let roles = {};
+    
+    // خلط اللاعبين عشوائياً
+    players.sort(() => Math.random() - 0.5);
+
+    // توزيع الأدوار (مافيا 1، طبيب 1، شرطي 1، والباقي مواطنين)
+    roles[players[0]] = "🕵️‍♂️ مافيا";
+    roles[players[1]] = "🩺 طبيب";
+    roles[players[2]] = "👮 شرطي";
+    
+    for (let i = 3; i < players.length; i++) {
+        roles[players[i]] = "👷 مواطن";
+    }
+
+    // تحديث قاعدة البيانات لبدء اللعبة (تنتقل الحالة لليل المافيا)
+    await updateDoc(roomRef, {
+        roles: roles,
+        status: "night_mafia",
+        alivePlayers: data.players // التأكد من أن الجميع أحياء عند البداية
+    });
+};
+
         // إدارة الحالات
         if (data.status === "night_mafia") showMafiaTurn(code, data, isAlive);
         else if (data.status === "night_doctor") showDoctorTurn(code, data, isAlive);
